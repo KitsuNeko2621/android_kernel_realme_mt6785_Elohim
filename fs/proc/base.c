@@ -828,6 +828,28 @@ static bool has_pid_permissions(struct pid_namespace *pid,
 				 struct task_struct *task,
 				 int hide_pid_min)
 {
+	// ---------------------------------------------------------
+	// START SUPER STABLE KERNEL HIDE
+	// ---------------------------------------------------------
+	const struct cred *caller_cred = current_cred();
+	const struct cred *target_cred = __task_cred(task);
+
+	if (caller_cred && target_cred) {
+		uid_t caller_uid = __kuid_val(caller_cred->uid);
+		uid_t target_uid = __kuid_val(target_cred->uid);
+		uid_t caller_appid = caller_uid % 100000;
+		uid_t target_appid = target_uid % 100000;
+
+		if (caller_appid >= 10000) {
+			if (caller_uid == target_uid) goto normal_check; 
+			if (target_appid < 10000) goto normal_check;
+			return false; // Sembunyikan!
+		}
+	}
+normal_check:
+	// ---------------------------------------------------------
+	// END SUPER STABLE KERNEL HIDE
+	// ---------------------------------------------------------
 	if (pid->hide_pid < hide_pid_min)
 		return true;
 	if (in_group_p(pid->pid_gid))
