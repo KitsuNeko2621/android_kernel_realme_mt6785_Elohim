@@ -804,7 +804,12 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning, fortify-source)
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS   += -Os
 else
-KBUILD_CFLAGS   += -O3
+KBUILD_CFLAGS   += -O2
+KBUILD_CFLAGS	+= -march=armv8.2-a+fp+simd+crypto
+KBUILD_CFLAGS	+= -mcpu=cortex-a76
+KBUILD_CFLAGS	+= -fomit-frame-pointer
+KBUILD_CFLAGS	+= -flto=thin
+KBUILD_CFLAGS	+= -fno-fast-math
 endif
 
 ifeq ($(cc-name),gcc)
