@@ -829,58 +829,83 @@ static bool has_pid_permissions(struct pid_namespace *pid,
 				 int hide_pid_min)
 {
 	// ---------------------------------------------------------
-	// START GHOST MODE KERNEL HIDE (V6.4 - MINUS WHATSAPP)
+	// START V10: THE PHANTOM TARGET (ZERO FC & ULTIMATE SAFE)
 	// ---------------------------------------------------------
 	const struct cred *caller_cred;
-	uid_t caller_uid, caller_appid;
-	char caller_name[TASK_COMM_LEN] = {0};
+	const struct cred *target_cred;
+	uid_t caller_uid, target_uid;
+	uid_t caller_appid, target_appid;
+	char target_name[TASK_COMM_LEN] = {0};
 
-	// 1. Sanity Check Lapis Baja & Anti-Zombie
+	// 1. Sanity Check Lapis Baja
 	if (unlikely(!task || !current)) goto normal_check;
 	if (current == task) goto normal_check;
 	if (unlikely(!pid_alive(task))) goto normal_check;
 
-	// 2. Ekstraksi Pemanggil
+	// 2. Ekstraksi Pemanggil (Caller)
 	caller_cred = current_cred();
 	if (unlikely(!caller_cred)) goto normal_check;
-	
 	caller_uid = __kuid_val(caller_cred->uid);
 	caller_appid = caller_uid % 100000;
 
-	// 3. JALUR TOL SUPER EKSPRES (Hemat 99% CPU)
+	// 3. JALUR TOL CALLER: Jika yang mencari adalah Sistem/ADB, bebaskan!
 	if (caller_appid < 10000 || caller_appid == 2000) goto normal_check;
 
-	// 4. TARGETED ASSASSINATION (PENEMBAK JITU)
-	get_task_comm(caller_name, current);
+	// 4. Ekstraksi Target dengan RCU Lock (Super Safe Memory)
+	rcu_read_lock();
+	target_cred = __task_cred(task);
+	if (unlikely(!target_cred)) {
+		rcu_read_unlock();
+		goto normal_check;
+	}
+	target_uid = __kuid_val(target_cred->uid);
+	rcu_read_unlock();
+
+	target_appid = target_uid % 100000;
+
+	// 5. JALUR KELUARGA: Biarkan aplikasi melihat dirinya sendiri
+	if (caller_appid == target_appid) goto normal_check;
+
+	// =========================================================
+	// 6. THE PHANTOM SHIELD (SEMBUNYIKAN TARGET!)
+	// =========================================================
+	
+	// A. ROOT SHIELD: Sembunyikan SEMUA proses tingkat Dewa (UID 0) 
+	// Ini membuat su, magiskd, ksud, dll otomatis gaib dari mata Bank/Tencent!
+	if (target_uid == 0) return false;
+
+	// B. BLOODLINE TRACKING (UNTUK TARGET)
+	// Jika Target bukan UID 0 (misal: Aplikasi Manager Root), kita periksa DNA-nya!
+	if (likely(task->group_leader)) {
+		get_task_comm(target_name, task->group_leader);
+	} else {
+		get_task_comm(target_name, task);
+	}
 
 	/* 
-	 * DAFTAR HITAM MAUT (Maksimal 16 karakter pertama)
+	 * DAFTAR HITAM TARGET (Aplikasi yang akan dibuat Gaib)
+	 * Maksimal 16 karakter pertama.
 	 */
-	if (strstr(caller_name, "tencent") ||    // Honor of Kings / PUBG
-	    strstr(caller_name, "miHoYo") ||     // Honkai / Genshin (Asia)
-	    strstr(caller_name, "HoYoverse") ||  // Honkai / Genshin (Global)
-	    strstr(caller_name, "bankmandiri")|| // Livin' by Mandiri
-	    strstr(caller_name, "bca") ||        // BCA Mobile
-	    strstr(caller_name, "bri") ||        // BRImo
-	    strstr(caller_name, "jago") ||       // Bank Jago (Konvensional & Syariah)
-	    strstr(caller_name, "syariah") ||    // Jago Syariah (Spesifik)
-	    strstr(caller_name, "seabank") ||    // SeaBank
-	    strstr(caller_name, "dana") ||       // DANA
-	    strstr(caller_name, "gojek") ||      // Gojek (GoPay)
-	    strstr(caller_name, "gopay") ||      // GoPay (Standalone)
-	    strstr(caller_name, "shopee") ||     // Shopee
-	    strstr(caller_name, "shopeepay") ||  // ShopeePay
-	    strstr(caller_name, "korlanta") ||   // Digital Korlantas
-	    strstr(caller_name, "qoin") ||       // Digital Korlantas
-	    strstr(caller_name, "pln")) {        // PLN Mobile
+	if (strstr(target_name, "magisk") ||     // Magisk Manager / Daemon
+	    strstr(target_name, "topjohnwu") ||  // Package Magisk
+	    strstr(target_name, "ksud") ||       // KernelSU Daemon bawaan
+	    strstr(target_name, "ksunext") ||    // KSU Next (Fork)
+	    strstr(target_name, "resukisu") ||   // Resukisu (KSU Fork)
+	    strstr(target_name, "sukisu") ||     // Sukisu (KSU Fork)
+	    strstr(target_name, "ksufork") ||    // KSU Fork umum
+	    strstr(target_name, "apatch") ||     // APatch
+	    strstr(target_name, "folkpatch") ||  // Folkpatch (APatch/KSU Fork)
+	    strstr(target_name, "edxposed") ||   // EdXposed
+	    strstr(target_name, "lsposed") ||    // LSPosed
+	    strstr(target_name, "riru")) {       // Riru / Zygisk
 		
-		// JIKA MEREKA YANG KEPO, BUTAKAN MATA MEREKA!
-		return false; 
+		// JIKA TARGET ADALAH ROOT/CHEAT/FORK MANAGER, BUAT MEREKA GAIB!
+		return false;
 	}
 
 normal_check:
 	// ---------------------------------------------------------
-	// END GHOST MODE KERNEL HIDE
+	// END V10
 	// ---------------------------------------------------------
 
 	if (pid->hide_pid < hide_pid_min)
