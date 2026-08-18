@@ -829,27 +829,60 @@ static bool has_pid_permissions(struct pid_namespace *pid,
 				 int hide_pid_min)
 {
 	// ---------------------------------------------------------
-	// START SUPER STABLE KERNEL HIDE
+	// START GHOST MODE KERNEL HIDE (V6.4 - MINUS WHATSAPP)
 	// ---------------------------------------------------------
-	const struct cred *caller_cred = current_cred();
-	const struct cred *target_cred = __task_cred(task);
+	const struct cred *caller_cred;
+	uid_t caller_uid, caller_appid;
+	char caller_name[TASK_COMM_LEN] = {0};
 
-	if (caller_cred && target_cred) {
-		uid_t caller_uid = __kuid_val(caller_cred->uid);
-		uid_t target_uid = __kuid_val(target_cred->uid);
-		uid_t caller_appid = caller_uid % 100000;
-		uid_t target_appid = target_uid % 100000;
+	// 1. Sanity Check Lapis Baja & Anti-Zombie
+	if (unlikely(!task || !current)) goto normal_check;
+	if (current == task) goto normal_check;
+	if (unlikely(!pid_alive(task))) goto normal_check;
 
-		if (caller_appid >= 10000) {
-			if (caller_uid == target_uid) goto normal_check; 
-			if (target_appid < 10000) goto normal_check;
-			return false; // Sembunyikan!
-		}
+	// 2. Ekstraksi Pemanggil
+	caller_cred = current_cred();
+	if (unlikely(!caller_cred)) goto normal_check;
+	
+	caller_uid = __kuid_val(caller_cred->uid);
+	caller_appid = caller_uid % 100000;
+
+	// 3. JALUR TOL SUPER EKSPRES (Hemat 99% CPU)
+	if (caller_appid < 10000 || caller_appid == 2000) goto normal_check;
+
+	// 4. TARGETED ASSASSINATION (PENEMBAK JITU)
+	get_task_comm(caller_name, current);
+
+	/* 
+	 * DAFTAR HITAM MAUT (Maksimal 16 karakter pertama)
+	 */
+	if (strstr(caller_name, "tencent") ||    // Honor of Kings / PUBG
+	    strstr(caller_name, "miHoYo") ||     // Honkai / Genshin (Asia)
+	    strstr(caller_name, "HoYoverse") ||  // Honkai / Genshin (Global)
+	    strstr(caller_name, "bankmandiri")|| // Livin' by Mandiri
+	    strstr(caller_name, "bca") ||        // BCA Mobile
+	    strstr(caller_name, "bri") ||        // BRImo
+	    strstr(caller_name, "jago") ||       // Bank Jago (Konvensional & Syariah)
+	    strstr(caller_name, "syariah") ||    // Jago Syariah (Spesifik)
+	    strstr(caller_name, "seabank") ||    // SeaBank
+	    strstr(caller_name, "dana") ||       // DANA
+	    strstr(caller_name, "gojek") ||      // Gojek (GoPay)
+	    strstr(caller_name, "gopay") ||      // GoPay (Standalone)
+	    strstr(caller_name, "shopee") ||     // Shopee
+	    strstr(caller_name, "shopeepay") ||  // ShopeePay
+	    strstr(caller_name, "korlanta") ||   // Digital Korlantas
+	    strstr(caller_name, "qoin") ||       // Digital Korlantas
+	    strstr(caller_name, "pln")) {        // PLN Mobile
+		
+		// JIKA MEREKA YANG KEPO, BUTAKAN MATA MEREKA!
+		return false; 
 	}
+
 normal_check:
 	// ---------------------------------------------------------
-	// END SUPER STABLE KERNEL HIDE
+	// END GHOST MODE KERNEL HIDE
 	// ---------------------------------------------------------
+
 	if (pid->hide_pid < hide_pid_min)
 		return true;
 	if (in_group_p(pid->pid_gid))
