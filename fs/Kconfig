@@ -328,6 +328,8 @@ source "fs/osdcardfs/Kconfig"
 #source "fs/sdcardfs/Kconfig"
 #endif
 
+source "fs/nomount/Kconfig"
+
 #if OPLUS_FEATURE_EXFAT_SUPPORT
 source "fs/oexfat/Kconfig"
 #else
