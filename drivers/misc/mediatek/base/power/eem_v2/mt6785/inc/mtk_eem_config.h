@@ -286,9 +286,9 @@ enum mt_cpu_dvfs_id {
 #define NR_FREQ_CPU 16
 
 #define L_FREQ_BASE			2000000
-#define B_FREQ_BASE			2050000
+#define B_FREQ_BASE			2100000
 #define	CCI_FREQ_BASE		1400000
-#define GPU_FREQ_BASE		806000
+#define GPU_FREQ_BASE		835000
 #define B_M_FREQ_BASE		1670000
 #define GPU_M_FREQ_BASE		620000
 
