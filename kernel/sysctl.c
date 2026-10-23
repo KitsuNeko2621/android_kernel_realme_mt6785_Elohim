@@ -136,9 +136,7 @@ static unsigned long zero_ul;
 static unsigned long one_ul = 1;
 static unsigned long long_max = LONG_MAX;
 static int one_hundred = 100;
-#ifdef CONFIG_MTK_GMO_RAM_OPTIMIZE
 static int two_hundred = 200;
-#endif
 #if defined(OPLUS_FEATURE_FG_IO_OPT) && defined(CONFIG_OPPO_FG_IO_OPT)
 /*Huacai.Zhou@Tech.Kernel.MM, 2020-03-23,add foreground io opt*/
 unsigned int sysctl_fg_io_opt = 1;
@@ -1659,12 +1657,7 @@ static struct ctl_table vm_table[] = {
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec_minmax,
 		.extra1		= &zero,
-#ifndef CONFIG_MTK_GMO_RAM_OPTIMIZE
-		.extra2		= &one_hundred,
-#else
 		.extra2		= &two_hundred,
-#endif
-		.extra2		= &one_hundred,
 	},
 #ifdef CONFIG_HUGETLB_PAGE
 	{
