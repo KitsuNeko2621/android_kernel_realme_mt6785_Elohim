@@ -391,7 +391,7 @@ struct upower_tbl upower_tbl_b_6785T = {
 		.lkg_pwr = {355786, 355786, 355786, 355786, 355786, 355786} },
 		{.cap = 999, .volt = 109375, .dyn_pwr = 788990,
 		.lkg_pwr = {374239, 374239, 374239, 374239, 374239, 374239} },
-		{.cap = 1024, .volt = 111875, .dyn_pwr = 847967,
+		{.cap = 1024, .volt = 115000, .dyn_pwr = 920500,
 		.lkg_pwr = {392972, 392972, 392972, 392972, 392972, 392972} },
 	},
 	.lkg_idx = DEFAULT_LKG_IDX,
@@ -439,7 +439,7 @@ struct upower_tbl upower_tbl_cluster_b_6785T = {
 			.lkg_pwr = {0, 0, 0, 0, 0, 0} },
 		{.cap = 999, .volt = 109375, .dyn_pwr = 0,
 			.lkg_pwr = {0, 0, 0, 0, 0, 0} },
-		{.cap = 1024, .volt = 111875, .dyn_pwr = 0,
+		{.cap = 1024, .volt = 115000, .dyn_pwr = 0,
 			.lkg_pwr = {0, 0, 0, 0, 0, 0} },
 	},
 	.lkg_idx = DEFAULT_LKG_IDX,
@@ -744,6 +744,5 @@ struct upower_tbl upower_tbl_cci_6783 = {
 };
 
 #endif /* UNIFIED_POWER_DATA_H */
-
 
 
