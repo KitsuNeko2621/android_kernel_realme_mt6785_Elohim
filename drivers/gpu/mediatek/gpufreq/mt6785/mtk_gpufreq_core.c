@@ -1913,6 +1913,15 @@ static ssize_t gpu_busy_show(struct kobject *kobj,
 static ssize_t gpu_clock_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
+	/*
+	 * g_cur_opp_freq is only the last programmed OPP. When the GPU is
+	 * power-gated (MTCMOS/BUCK off) it is stale, so report the lowest
+	 * OPP instead to reflect the idle state.
+	 */
+	if (!g_mtcmos_on || !g_buck_on)
+		return scnprintf(buf, PAGE_SIZE, "%u\n",
+				__mt_gpufreq_sysfs_mhz(g_segment_min_opp_idx));
+
 	return scnprintf(buf, PAGE_SIZE, "%u\n", g_cur_opp_freq / 1000);
 }
 
