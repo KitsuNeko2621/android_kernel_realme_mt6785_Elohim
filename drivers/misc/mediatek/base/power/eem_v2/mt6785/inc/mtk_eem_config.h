@@ -278,9 +278,9 @@ enum mt_cpu_dvfs_id {
 #define NR_FREQ_CPU 16
 
 #define L_FREQ_BASE			2000000
-#define B_FREQ_BASE			2050000
+#define B_FREQ_BASE			2100000
 #define	CCI_FREQ_BASE		1400000
-#define GPU_FREQ_BASE		806000
+#define GPU_FREQ_BASE		821000
 #define B_M_FREQ_BASE		1670000
 #define GPU_M_FREQ_BASE		620000
 
@@ -334,7 +334,7 @@ enum mt_cpu_dvfs_id {
 #define DVTFIXED_M_VAL	(0x07)
 
 
-#define VMAX_VAL_B		(0x73) /* volt domain: 1.11875v*/
+#define VMAX_VAL_B		(0x7A) /* volt domain: 1.1625v (OC)*/
 #define VMIN_VAL_B		(0x20) /* volt domain: 0.6v*/
 #define VCO_VAL_B		(0x20) /* volt domain: 0.6v*/
 #define DVTFIXED_VAL_B	(0x6)
@@ -379,7 +379,7 @@ enum mt_cpu_dvfs_id {
 #define VCO_VAL_LL                      (0x15)
 
 /* different for B_L */
-#define VMAX_VAL_BL                     (0x73) /* volt domain: 1.11875v*/
+#define VMAX_VAL_BL                     (0x7A) /* volt domain: 1.1625v (OC)*/
 #define VMIN_VAL_BL                     (0x20)
 #define VCO_VAL_BL                      (0x20)
 #define DVTFIXED_VAL_BL					(0x6)
@@ -391,7 +391,7 @@ enum mt_cpu_dvfs_id {
 #define DVTFIXED_VAL_H			(0x03)
 
 /* different for B_H */
-#define VMAX_VAL_BH			(0x73) /* volt domain: 1.11875v*/
+#define VMAX_VAL_BH			(0x7A) /* volt domain: 1.1625v (OC)*/
 #define VMIN_VAL_BH			(0x20)
 #define VCO_VAL_BH			(0x20)
 #define DVTFIXED_VAL_BH		(0x6)
