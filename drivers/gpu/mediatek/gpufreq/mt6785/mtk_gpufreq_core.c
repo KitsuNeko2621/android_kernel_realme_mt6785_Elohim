@@ -25,6 +25,8 @@
 #include <linux/uaccess.h>
 #include <linux/random.h>
 #include <linux/seq_file.h>
+#include <linux/kobject.h>
+#include <linux/sysfs.h>
 
 #include "mtk_gpufreq.h"
 #include "mtk_gpufreq_core.h"
@@ -217,6 +219,23 @@ static unsigned int g_cur_opp_vgpu;
 static unsigned int g_cur_opp_vsram_gpu;
 static unsigned int g_cur_opp_idx;
 static unsigned int g_keep_opp_freq_idx;
+
+/*
+ * OPP window set from /sys/kernel/gpu/gpu_{max,min}_clock (real OPP index).
+ * smaller index = higher frequency. Defaults mean "no user limit".
+ */
+static unsigned int g_user_max_idx;
+static unsigned int g_user_min_idx = UINT_MAX;
+
+static unsigned int __mt_gpufreq_apply_user_limit(unsigned int idx)
+{
+	if (idx < g_user_max_idx)
+		idx = g_user_max_idx;
+	if (g_user_min_idx != UINT_MAX && idx > g_user_min_idx)
+		idx = g_user_min_idx;
+
+	return idx;
+}
 static unsigned int g_fixed_freq;
 static unsigned int g_fixed_vgpu;
 static unsigned int g_max_limited_idx;
@@ -357,6 +376,10 @@ unsigned int mt_gpufreq_target(unsigned int request_idx, bool is_real_idx)
 				target_idx,
 				g_max_opp_idx_num - 1);
 	}
+
+	/* OPP window set by user via /sys/kernel/gpu (Thermal/PBM still win) */
+	target_idx = __mt_gpufreq_apply_user_limit(target_idx);
+	target_freq = g_opp_table[target_idx].gpufreq_khz;
 
 	/* OPP freq is limited by Thermal/Power/PBM */
 	if (g_max_limited_idx != g_max_opp_idx_num) {
@@ -1857,6 +1880,201 @@ static int __mt_gpufreq_create_procfs(void)
 	return 0;
 }
 #endif
+
+/**
+ * ===============================================
+ * SECTION : SYSFS interface (/sys/kernel/gpu/)
+ * Nodes that Franco Kernel Manager's generic GPU page expects.
+ * All frequencies are in MHz, loading is in percent.
+ * gpu_max_clock / gpu_min_clock are writable (OPP window); the rest are RO.
+ * ===============================================
+ */
+static struct kobject *g_gpu_kobj;
+
+static unsigned int __mt_gpufreq_sysfs_mhz(unsigned int real_idx)
+{
+	if (!g_opp_table || real_idx >= g_max_opp_idx_num)
+		return 0;
+
+	return g_opp_table[real_idx].gpufreq_khz / 1000;
+}
+
+static ssize_t gpu_busy_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	unsigned int loading = 0;
+
+	if (!mtk_get_gpu_loading(&loading))
+		loading = 0;
+
+	return scnprintf(buf, PAGE_SIZE, "%u\n", loading);
+}
+
+static ssize_t gpu_clock_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%u\n", g_cur_opp_freq / 1000);
+}
+
+static unsigned int __mt_gpufreq_sysfs_find_idx(unsigned int mhz)
+{
+	unsigned int i;
+
+	if (!g_opp_table)
+		return UINT_MAX;
+
+	for (i = g_segment_max_opp_idx;
+			i <= g_segment_min_opp_idx && i < g_max_opp_idx_num; i++)
+		if (g_opp_table[i].gpufreq_khz / 1000 == mhz)
+			return i;
+
+	return UINT_MAX;
+}
+
+static ssize_t gpu_max_clock_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	unsigned int idx = max(g_user_max_idx, g_segment_max_opp_idx);
+
+	return scnprintf(buf, PAGE_SIZE, "%u\n", __mt_gpufreq_sysfs_mhz(idx));
+}
+
+static ssize_t gpu_max_clock_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int mhz, idx;
+
+	if (kstrtouint(buf, 10, &mhz))
+		return -EINVAL;
+
+	idx = __mt_gpufreq_sysfs_find_idx(mhz);
+	if (idx == UINT_MAX)
+		return -EINVAL;
+
+	mutex_lock(&mt_gpufreq_lock);
+	g_user_max_idx = idx;
+	/* keep min <= max: lower the floor if it is above the new ceiling */
+	if (g_user_min_idx != UINT_MAX && g_user_min_idx < idx)
+		g_user_min_idx = idx;
+	mutex_unlock(&mt_gpufreq_lock);
+
+	/* apply right away instead of waiting for the next GED request */
+	mt_gpufreq_target(g_cur_opp_idx, true);
+
+	return count;
+}
+
+static ssize_t gpu_min_clock_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	unsigned int idx = min(g_user_min_idx, g_segment_min_opp_idx);
+
+	return scnprintf(buf, PAGE_SIZE, "%u\n", __mt_gpufreq_sysfs_mhz(idx));
+}
+
+static ssize_t gpu_min_clock_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int mhz, idx;
+
+	if (kstrtouint(buf, 10, &mhz))
+		return -EINVAL;
+
+	idx = __mt_gpufreq_sysfs_find_idx(mhz);
+	if (idx == UINT_MAX)
+		return -EINVAL;
+
+	mutex_lock(&mt_gpufreq_lock);
+	g_user_min_idx = idx;
+	/* keep min <= max: raise the ceiling if it is below the new floor */
+	if (g_user_max_idx > idx)
+		g_user_max_idx = idx;
+	mutex_unlock(&mt_gpufreq_lock);
+
+	mt_gpufreq_target(g_cur_opp_idx, true);
+
+	return count;
+}
+
+static ssize_t gpu_freq_table_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	ssize_t len = 0;
+	unsigned int i;
+
+	for (i = g_segment_max_opp_idx;
+			i <= g_segment_min_opp_idx && i < g_max_opp_idx_num; i++)
+		len += scnprintf(buf + len, PAGE_SIZE - len, "%s%u",
+				(i == g_segment_max_opp_idx) ? "" : " ",
+				__mt_gpufreq_sysfs_mhz(i));
+
+	len += scnprintf(buf + len, PAGE_SIZE - len, "\n");
+
+	return len;
+}
+
+static ssize_t gpu_governor_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "ged_dvfs\n");
+}
+
+static ssize_t gpu_available_governor_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "ged_dvfs\n");
+}
+
+static struct kobj_attribute g_gpufreq_attr_busy = __ATTR_RO(gpu_busy);
+static struct kobj_attribute g_gpufreq_attr_clock = __ATTR_RO(gpu_clock);
+static struct kobj_attribute g_gpufreq_attr_max = __ATTR_RW(gpu_max_clock);
+static struct kobj_attribute g_gpufreq_attr_min = __ATTR_RW(gpu_min_clock);
+static struct kobj_attribute g_gpufreq_attr_table = __ATTR_RO(gpu_freq_table);
+static struct kobj_attribute g_gpufreq_attr_gov = __ATTR_RO(gpu_governor);
+static struct kobj_attribute g_gpufreq_attr_avail_gov =
+		__ATTR_RO(gpu_available_governor);
+
+static struct attribute *g_gpufreq_sysfs_attrs[] = {
+	&g_gpufreq_attr_busy.attr,
+	&g_gpufreq_attr_clock.attr,
+	&g_gpufreq_attr_max.attr,
+	&g_gpufreq_attr_min.attr,
+	&g_gpufreq_attr_table.attr,
+	&g_gpufreq_attr_gov.attr,
+	&g_gpufreq_attr_avail_gov.attr,
+	NULL,
+};
+
+static const struct attribute_group g_gpufreq_sysfs_group = {
+	.attrs = g_gpufreq_sysfs_attrs,
+};
+
+static int __mt_gpufreq_create_sysfs(void)
+{
+	int ret;
+
+	if (g_gpu_kobj)
+		return 0;
+
+	g_gpu_kobj = kobject_create_and_add("gpu", kernel_kobj);
+	if (!g_gpu_kobj) {
+		gpufreq_pr_err(
+				"@%s: fail to create /sys/kernel/gpu\n",
+				__func__);
+		return -ENOMEM;
+	}
+
+	ret = sysfs_create_group(g_gpu_kobj, &g_gpufreq_sysfs_group);
+	if (ret) {
+		gpufreq_pr_err(
+				"@%s: fail to create sysfs group, ret = %d\n",
+				__func__, ret);
+		kobject_put(g_gpu_kobj);
+		g_gpu_kobj = NULL;
+	}
+
+	return ret;
+}
 
 /**
  * ===============================================
@@ -3528,6 +3746,9 @@ static int __mt_gpufreq_pdrv_probe(struct platform_device *pdev)
 			g_cur_opp_idx);
 
 	__mt_gpufreq_init_others();
+
+	/* /sys/kernel/gpu/* for Franco Kernel Manager (non-fatal on failure) */
+	__mt_gpufreq_create_sysfs();
 
 	return 0;
 }
